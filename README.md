@@ -30,7 +30,6 @@ The SVG manifest icon is a scalable icon source. Some browser/device install flo
 - Persistent recent history stored locally in the browser (up to 50 calculations)
 - Responsive light interface
 - Keyboard input
-- Camera-based paper calculation scan with editable OCR text, editable expression and written-answer verification (OCR engine loads from CDN; handwriting accuracy varies)
 
 ## Current limitations
 
