@@ -164,7 +164,7 @@
       const expression=speechExpression(transcript);
       tokens=[];current="0";justEvaluated=false;entryStarted=false;
       const trace=[],result=evaluate(expression,trace);
-      trace.forEach(step=>{steps.push(step);if(steps.length>119)steps.shift();});
+      appendSteps(trace);
       saveStep(expression+" =",fmt(result));
       recordHistory(expression,fmt(result));
       expressionView.textContent=expression+" =";current=String(result);justEvaluated=true;entryStarted=false;
@@ -238,9 +238,15 @@
     if(!tokens.length)return current;
     return tokens.join(" ")+(entryStarted?" "+current:"");
   };
-  const saveStep=(label,result)=>{
-    steps.push({label,result:String(result)});if(steps.length>120)steps.shift();
+  const appendSteps=items=>{
+    for(const item of items){
+      steps.push(item);
+      if(steps.length>120)steps.shift();
+    }
     stepIndex=steps.length-1;
+  };
+  const saveStep=(label,result)=>{
+    appendSteps([{label,result:String(result)}]);
   };
   const input=value=>{
     if(justEvaluated){current="0";tokens=[];justEvaluated=false;entryStarted=false;}
@@ -270,7 +276,7 @@
   const equals=()=>{
     const source=expressionText(),trace=[];
     const result=evaluate(source,trace);
-    steps.push(...trace);saveStep(source+" =",fmt(result));recordHistory(source,fmt(result));
+    appendSteps(trace);saveStep(source+" =",fmt(result));recordHistory(source,fmt(result));
     current=String(result);tokens=[];justEvaluated=true;entryStarted=false;
     message("Result saved · "+steps.length+" of 120 review steps");render();speakCalculation(source,fmt(result));
   };
@@ -339,7 +345,22 @@
           current=String(Number(result.toFixed(10)));entryStarted=true;justEvaluated=false;
           message("Percentage applied");render();break;
         }
-        case "sqrt":{const n=raw();if(n<0)throw new Error("Square root needs a non-negative number");const result=Math.sqrt(n);saveStep("√("+fmt(n)+") =",fmt(result));recordHistory("√("+fmt(n)+")",fmt(result));current=String(result);tokens=[];justEvaluated=true;entryStarted=false;message("Square root calculated");render();break;}
+        case "sqrt":{
+          const n=raw();
+          if(n<0)throw new Error("Square root needs a non-negative number");
+          const result=Math.sqrt(n),label="√("+fmt(n)+")";
+          saveStep(label+" =",fmt(result));
+          // A function key transforms only the current operand. Keep any
+          // earlier operands/operators so expressions such as 200 + √(9) survive.
+          const hasPendingExpression=tokens.length>0;
+          if(!hasPendingExpression)recordHistory(label,fmt(result));
+          current=String(Number(result.toFixed(10)));
+          entryStarted=true;
+          justEvaluated=false;
+          message("Square root calculated");
+          render();
+          break;
+        }
         case "equals":equals();break;
         case "gst-plus":gst("add");break;
         case "gst-minus":gst("remove");break;
