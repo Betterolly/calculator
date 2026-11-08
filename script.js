@@ -179,21 +179,19 @@
     }catch(error){message(error.message||"Could not understand that calculation");speak("Sorry, I could not understand that calculation");}
   };
   if(SpeechRecognition){
-    recognition=new SpeechRecognition();recognition.lang="en-IN";recognition.interimResults=true;recognition.continuous=false;
+    recognition=new SpeechRecognition();recognition.lang="en-IN";recognition.interimResults=false;recognition.continuous=false;
     let recognizedSegments=[];
     recognition.onstart=()=>{recognizedSegments=[];listening=true;micToggle.setAttribute("aria-pressed","true");micToggle.classList.add("listening");micLabel.textContent="Listening";message("Listening · say your calculation");};
     recognition.onresult=event=>{
-      let interim="";
-      // Keep the latest text for every result slot, including interim slots.
-      // Some engines finalize the first spoken number later than the rest.
-      for(let i=0;i<event.results.length;i++){
-        const text=event.results[i][0].transcript.trim();
-        recognizedSegments[i]=text;
-        if(!event.results[i].isFinal)interim+=text+" ";
+      // Use final results only. Interim speech text can be revised by the
+      // browser while listening (for example, changing a spoken "minus"
+      // into "plus"), so never show or calculate from those temporary guesses.
+      for(let i=event.resultIndex;i<event.results.length;i++){
+        if(!event.results[i].isFinal)continue;
+        recognizedSegments[i]=event.results[i][0].transcript.trim();
       }
       const preview=recognizedSegments.filter(Boolean).join(" ").trim();
-      if(interim.trim())message("Hearing: "+preview);
-      else if(preview)message("Recognized: "+preview);
+      if(preview)message("Recognized: "+preview);
     };
     recognition.onerror=event=>{resetMicUI();message(event.error==="not-allowed"?"Microphone permission is blocked. Allow it in your browser settings.":"Voice input error · "+event.error);};
     recognition.onend=()=>{
