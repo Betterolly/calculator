@@ -21,14 +21,14 @@
     const n=Number(current);
     display.classList.remove("review-result");
     display.textContent=current!=="" && Number.isFinite(n) ? fmt(n) : current;
-    expressionView.textContent=tokens.join(" ") + (tokens.length ? (tokens[tokens.length-1] && /[+−×÷]$/.test(tokens[tokens.length-1]) ? "" : "") : "");
+    expressionView.textContent=tokens.length ? tokens.join(" ") + (/[+−×÷]$/.test(tokens[tokens.length-1]) ? "" : " "+current) : "";
     memoryIndicator.textContent=memory!==0?"M":"";
   };
   const stopReplay = () => { if(replayTimer!==null){clearInterval(replayTimer);replayTimer=null;} };
   const spokenLabel = button => {
     if (button.dataset.value !== undefined) return ({".":"decimal point","00":"double zero","+":"plus","−":"minus","×":"multiply","÷":"divide"})[button.dataset.value] || button.dataset.value;
     const labels={"clear":"all clear","clear-entry":"clear entry","sign":"change sign","percent":"percent","sqrt":"square root","equals":"equals","gst-plus":"add GST","gst-minus":"remove GST","rate":"GST rate","memory-plus":"memory plus","memory-minus":"memory minus","memory-recall":"memory recall","check-prev":"previous step","check-next":"next step","correct":"correct","replay":"replay steps"};
-    return labels[button.dataset.action] || button.textContent.replace(/\\s+/g," ").trim().toLowerCase();
+    return labels[button.dataset.action] || button.textContent.replace(/\s+/g," ").trim().toLowerCase();
   };
   const speak = text => {
     if (!voiceEnabled || !("speechSynthesis" in window) || !text) return;
@@ -111,37 +111,49 @@
     if(!expression||!/^[\d.]+(?:[+−×÷][\d.]+)*$/.test(expression))throw new Error("I couldn't understand that. Try saying “2 plus 5 minus 67”.");
     return expression;
   };
-  const stopListening = () => {
+  const resetMicUI = () => {
     listening=false;micToggle.setAttribute("aria-pressed","false");micToggle.classList.remove("listening");micLabel.textContent="Speak";
+  };
+  const stopListening = () => {
+    resetMicUI();
     if(recognition){try{recognition.stop();}catch(_){}}
+  };
+  const processSpokenCalculation = transcript => {
+    try{
+      const expression=speechExpression(transcript);
+      tokens=[];current="0";justEvaluated=false;
+      const trace=[],result=evaluate(expression,trace);
+      trace.forEach(step=>{steps.push(step);if(steps.length>119)steps.shift();});
+      saveStep(expression+" =",fmt(result));
+      expressionView.textContent=expression+" =";current=String(result);justEvaluated=true;
+      message("Heard: "+expression+" · result saved");render();speakCalculation(expression,fmt(result));
+    }catch(error){message(error.message||"Could not understand that calculation");speak("Sorry, I could not understand that calculation");}
   };
   if(SpeechRecognition){
     recognition=new SpeechRecognition();recognition.lang="en-IN";recognition.interimResults=true;recognition.continuous=false;
-    recognition.onstart=()=>{listening=true;micToggle.setAttribute("aria-pressed","true");micToggle.classList.add("listening");micLabel.textContent="Listening";message("Listening · say your calculation");};
+    let finalTranscript="";
+    recognition.onstart=()=>{finalTranscript="";listening=true;micToggle.setAttribute("aria-pressed","true");micToggle.classList.add("listening");micLabel.textContent="Listening";message("Listening · say your calculation");};
     recognition.onresult=event=>{
-      let interim="",finalText="";
-      // SpeechRecognition may finalize the first word/number in an earlier result.
-      // Always rebuild the full utterance from every result so the leading operand is not lost.
+      let interim="";
+      finalTranscript="";
+      // Collect every finalized segment, but wait until recognition ends before parsing.
+      // This prevents an early finalized "1" from being treated as the whole calculation.
       for(let i=0;i<event.results.length;i++){
         const text=event.results[i][0].transcript;
-        if(event.results[i].isFinal)finalText+=text+" ";
+        if(event.results[i].isFinal)finalTranscript+=text+" ";
         else interim+=text;
       }
       if(interim)message("Hearing: "+interim);
-      if(finalText){
-        try{
-          const expression=speechExpression(finalText);
-          tokens=[];current="0";justEvaluated=false;
-          const trace=[],result=evaluate(expression,trace);
-          steps.push(...trace);saveStep(expression+" =",fmt(result));
-          expressionView.textContent=expression+" =";current=String(result);justEvaluated=true;
-          message("Heard: "+expression+" · result saved");render();speakCalculation(expression,fmt(result));
-        }catch(error){message(error.message||"Could not understand the calculation");speak("Sorry, I could not understand that calculation");}
-        stopListening();
-      }
+      else if(finalTranscript.trim())message("Recognized: "+finalTranscript.trim());
     };
-    recognition.onerror=event=>{stopListening();message(event.error==="not-allowed"?"Microphone permission is blocked. Allow it in your browser settings.":"Voice input error · "+event.error);};
-    recognition.onend=()=>{if(listening)stopListening();};
+    recognition.onerror=event=>{resetMicUI();message(event.error==="not-allowed"?"Microphone permission is blocked. Allow it in your browser settings.":"Voice input error · "+event.error);};
+    recognition.onend=()=>{
+      const transcript=finalTranscript.trim();
+      const shouldProcess=listening;
+      resetMicUI();
+      if(shouldProcess&&transcript)processSpokenCalculation(transcript);
+      else if(shouldProcess)message("No speech detected · tap Speak and try again");
+    };
     micToggle.addEventListener("click",()=>{if(listening){stopListening();message("Voice input stopped");return;}try{recognition.start();}catch(_){message("Voice input is already starting. Try again in a moment.");}});
   }else{
     micToggle.disabled=true;micLabel.textContent="Unavailable";micToggle.title="Speech recognition is not supported in this browser";
@@ -203,7 +215,7 @@
   const correct=()=>{
     if(stepIndex<0||!steps[stepIndex]){message("No calculation selected · press CHECK first");return;}
     const item=steps[stepIndex];
-    const gstMatch=item.label.match(/^([\\d,.]+) ([+−]) GST ([\\d.]+)%/);
+    const gstMatch=item.label.match(/^([\d,.]+) ([+−]) GST ([\d.]+)%/);
     if(gstMatch){
       const rateText=prompt("Correct the GST rate (%):",gstMatch[3]);
       if(rateText===null)return;
@@ -213,7 +225,7 @@
       steps[stepIndex]={label:fmt(amount)+(gstMatch[2]==="+"?" + GST ":" − GST ")+rate+"% = (corrected)",result:fmt(result)};
       gstRate=rate;current=String(Number(result.toFixed(10)));tokens=[];justEvaluated=true;showStep();message("GST step corrected and recalculated");return;
     }
-    const revised=prompt("Correct the calculation expression:",item.label.replace(/\\s*=\\s*$/,""));
+    const revised=prompt("Correct the calculation expression:",item.label.replace(/\s*=\s*$/,""));
     if(revised===null)return;
     const result=evaluate(revised);
     steps[stepIndex]={label:revised+" = (corrected)",result:fmt(result)};
