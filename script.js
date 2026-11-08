@@ -99,7 +99,17 @@
   const correct=()=>{
     if(stepIndex<0||!steps[stepIndex]){message("No calculation selected · press CHECK first");return;}
     const item=steps[stepIndex];
-    const revised=prompt("Correct the calculation expression:",item.label.replace(/\s*=\s*$/,""));
+    const gstMatch=item.label.match(/^([\\d,.]+) ([+−]) GST ([\\d.]+)%/);
+    if(gstMatch){
+      const rateText=prompt("Correct the GST rate (%):",gstMatch[3]);
+      if(rateText===null)return;
+      const rate=Number(rateText),amount=Number(gstMatch[1].replace(/,/g,""));
+      if(!Number.isFinite(rate)||rate<0||rate>100)throw new Error("Enter a GST rate from 0 to 100");
+      const result=gstMatch[2]==="+"?amount*(1+rate/100):amount/(1+rate/100);
+      steps[stepIndex]={label:fmt(amount)+(gstMatch[2]==="+"?" + GST ":" − GST ")+rate+"% = (corrected)",result:fmt(result)};
+      gstRate=rate;current=String(Number(result.toFixed(10)));tokens=[];justEvaluated=true;showStep();message("GST step corrected and recalculated");return;
+    }
+    const revised=prompt("Correct the calculation expression:",item.label.replace(/\\s*=\\s*$/,""));
     if(revised===null)return;
     const result=evaluate(revised);
     steps[stepIndex]={label:revised+" = (corrected)",result:fmt(result)};
