@@ -47,6 +47,73 @@
   };
   voiceToggle.addEventListener("click",()=>setVoice(!voiceEnabled));
 
+  // Speech-to-text input: turn spoken number/operator words into a normal expression.
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const micToggle = $("#mic-toggle"), micLabel = $("#mic-label");
+  let recognition = null, listening = false;
+  const smallNumbers = {zero:0,oh:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19};
+  const tensNumbers = {twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
+  const numberWords = new Set([...Object.keys(smallNumbers),...Object.keys(tensNumbers),"hundred","thousand"]);
+  const parseNumberWords = words => {
+    let total=0, group=0, seen=false;
+    for(const word of words){
+      if(Object.prototype.hasOwnProperty.call(smallNumbers,word)){group+=smallNumbers[word];seen=true;}
+      else if(Object.prototype.hasOwnProperty.call(tensNumbers,word)){group+=tensNumbers[word];seen=true;}
+      else if(word==="hundred"){group=Math.max(1,group)*100;seen=true;}
+      else if(word==="thousand"){total+=Math.max(1,group)*1000;group=0;seen=true;}
+    }
+    return seen?String(total+group):null;
+  };
+  const speechExpression = transcript => {
+    const words=transcript.toLowerCase().replace(/[^a-z0-9.\s]/g," ").replace(/\b(please|calculate|equals|equal to|what is|what's|the answer)\b/g," ").trim().split(/\s+/).filter(Boolean);
+    const out=[];let numberGroup=[];
+    const flush=()=>{if(numberGroup.length){out.push(parseNumberWords(numberGroup) ?? numberGroup.join(""));numberGroup=[];}};
+    const operators={plus:"+",add:"+",added:"+",minus:"−",subtract:"−",take:"−",times:"×",multiply:"×",multiplied:"×",into:"×",divide:"÷",divided:"÷",over:"÷"};
+    for(let i=0;i<words.length;i++){
+      const word=words[i];
+      if(numberWords.has(word)){numberGroup.push(word);continue;}
+      if(word==="point"||word==="dot"){flush();out.push(".");continue;}
+      if(operators[word]){flush();out.push(operators[word]);continue;}
+      if(/^\d+(?:\.\d+)?$/.test(word)){flush();out.push(word);continue;}
+      if(word==="and"){continue;}
+      flush();
+    }
+    flush();
+    const expression=out.join("");
+    if(!expression || !/^[\d.]+(?:[+−×÷][\d.]+)*$/.test(expression))throw new Error("I couldn't understand that. Try saying “2 plus 5 minus 67”.");
+    return expression;
+  };
+  const stopListening = () => {
+    listening=false;micToggle.setAttribute("aria-pressed","false");micToggle.classList.remove("listening");micLabel.textContent="Speak";
+    if(recognition){try{recognition.stop();}catch(_){}}
+  };
+  if(SpeechRecognition){
+    recognition=new SpeechRecognition();recognition.lang="en-IN";recognition.interimResults=true;recognition.continuous=false;
+    recognition.onstart=()=>{listening=true;micToggle.setAttribute("aria-pressed","true");micToggle.classList.add("listening");micLabel.textContent="Listening";message("Listening · say your calculation");};
+    recognition.onresult=event=>{
+      let interim="",finalText="";
+      for(let i=event.resultIndex;i<event.results.length;i++){const text=event.results[i][0].transcript;if(event.results[i].isFinal)finalText+=text;else interim+=text;}
+      if(interim)message("Hearing: "+interim);
+      if(finalText){
+        try{
+          const expression=speechExpression(finalText);
+          tokens=[];current="0";justEvaluated=false;
+          const trace=[],result=evaluate(expression,trace);
+          steps.push(...trace);saveStep(expression+" =",fmt(result));
+          expressionView.textContent=expression+" =";current=String(result);justEvaluated=true;
+          message("Heard: "+expression+" · result saved");render();speakCalculation(expression,fmt(result));
+        }catch(error){message(error.message||"Could not understand the calculation");speak("Sorry, I could not understand that calculation");}
+        stopListening();
+      }
+    };
+    recognition.onerror=event=>{stopListening();message(event.error==="not-allowed"?"Microphone permission is blocked. Allow it in your browser settings.":"Voice input error · "+event.error);};
+    recognition.onend=()=>{if(listening)stopListening();};
+    micToggle.addEventListener("click",()=>{if(listening){stopListening();message("Voice input stopped");return;}try{recognition.start();}catch(_){message("Voice input is already starting. Try again in a moment.");}});
+  }else{
+    micToggle.disabled=true;micLabel.textContent="Unavailable";micToggle.title="Speech recognition is not supported in this browser";
+    micToggle.addEventListener("click",()=>message("Speech recognition is not supported in this browser. Try a supported browser such as Chrome."));
+  }
+
   // Recursive-descent parser: multiplication/division take precedence over addition/subtraction.
   const evaluate = (source, trace=[]) => {
     const s=source.replace(/×/g,"*").replace(/÷/g,"/").replace(/−/g,"-").replace(/,/g,"").replace(/\s+/g,"");
