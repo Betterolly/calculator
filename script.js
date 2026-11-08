@@ -176,5 +176,5 @@
     else if(k==="+"||k==="-"||k==="*"||k==="/"){event.preventDefault();speak(({ "+":"plus","-":"minus","*":"multiply","/":"divide"})[k]);operator(({ "+":"+","-":"−","*":"×","/":"÷"})[k]);}
     else if(k==="%"){speak("percent");handle("percent");}
   });
-  setSound(true);render();
+  render();
 })();
