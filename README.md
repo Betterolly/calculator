@@ -37,6 +37,6 @@ The SVG manifest icon is a scalable icon source. Some browser/device install flo
 - The review list is in memory and resets when the page is refreshed.
 - Power operations are supported through keyboard input (`^`), but there is no dedicated power key on the keypad.
 - Percentage behavior follows common calculator conventions; confirm the displayed expression for business-critical calculations.
-- Correction/replay is still a basic review workflow, not a full audit trail with automatic downstream recalculation.
+- Correcting an arithmetic review step now re-evaluates the full expression and rebuilds that calculation's review steps. This is not a full audit trail, and corrected entries are saved as new history items.
 
 For financial use, independently verify important results until the app has been tested on the target device with real business examples.
