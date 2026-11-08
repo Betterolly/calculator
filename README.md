@@ -6,6 +6,19 @@ A lightweight, mobile-friendly business calculator built with plain HTML, CSS, a
 
 Open `index.html` in a modern browser. No build tools or dependencies are required.
 
+## Publish with GitHub Pages
+
+Enable Pages for the repository's `main` branch and root folder. The project-site URL will normally be `https://betterolly.github.io/calculator/`.
+
+## App branding
+
+- Custom scalable SVG app icon: `icons/calculator.svg`
+- Browser tab icon linked from `index.html`
+- PWA metadata in `manifest.json`
+- Relative asset paths are used so the project also works under the `/calculator/` URL path.
+
+The SVG manifest icon is a scalable icon source. Some browser/device install flows may prefer or require raster 192px and 512px PNG icons for the broadest compatibility; verify installation on the target Android device.
+
 ## Included
 
 - Familiar four-column physical-calculator keypad
