@@ -196,7 +196,7 @@
       if(shouldProcess&&transcript)processSpokenCalculation(transcript);
       else if(shouldProcess)message("No speech detected · tap Speak and try again");
     };
-    micToggle.addEventListener("click",()=>{if(listening){stopListening();message("Voice input stopped");return;}try{recognition.start();}catch(_){message("Voice input is already starting. Try again in a moment.");}});
+    micToggle.addEventListener("click",()=>{stopReplay();if(listening){stopListening();message("Voice input stopped");return;}try{recognition.start();}catch(_){message("Voice input is already starting. Try again in a moment.");}});
   }else{
     micToggle.disabled=true;micLabel.textContent="Unavailable";micToggle.title="Speech recognition is not supported in this browser";
     micToggle.addEventListener("click",()=>message("Speech recognition is not supported in this browser. Try a supported browser such as Chrome."));
@@ -392,6 +392,7 @@
   window.addEventListener("keydown",event=>{
     if(event.ctrlKey||event.metaKey||event.altKey)return;
     const k=event.key;
+    if(/^[0-9.]$/.test(k)||["Enter","=","Escape","Backspace","+","-","*","/","^","%"].includes(k))stopReplay();
     if(/^[0-9.]$/.test(k)){speak(k==="."?"decimal point":k);input(k);}
     else if(k==="Enter"||k==="="){speak("equals");handle("equals");}
     else if(k==="Escape"){speak("all clear");clear();}
