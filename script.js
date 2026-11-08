@@ -303,6 +303,17 @@
   const correct=()=>{
     if(stepIndex<0||!steps[stepIndex]){message("No calculation selected · press CHECK first");return;}
     const item=steps[stepIndex];
+    const sqrtMatch=item.label.match(/^√\(([\d,.]+)\)/);
+    if(sqrtMatch){
+      const correctedInput=prompt("Correct the number under the square root:",sqrtMatch[1].replace(/,/g,""));
+      if(correctedInput===null)return;
+      const amount=Number(correctedInput);
+      if(!Number.isFinite(amount)||amount<0)throw new Error("Enter a non-negative number");
+      const result=Math.sqrt(amount);
+      steps[stepIndex]={label:"√("+fmt(amount)+") = (corrected)",result:fmt(result)};
+      current=String(Number(result.toFixed(10)));tokens=[];justEvaluated=true;showStep();
+      message("Square-root step corrected");return;
+    }
     const gstMatch=item.label.match(/^([\d,.]+) ([+−]) GST ([\d.]+)%/);
     if(gstMatch){
       const rateText=prompt("Correct the GST rate (%):",gstMatch[3]);
