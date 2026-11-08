@@ -9,7 +9,11 @@
     const lines=text.split(/\n+/).map(line=>line.trim()).filter(Boolean);
     const cleaned=lines.map(line=>line.replace(/^\s*(?:\d{1,3}[.)]|[•*-])\s*/,"").replace(/(?:answer|total|result)\s*[:=]?/i,"").trim()).filter(Boolean);
     let joined=cleaned.join(" ").replace(/[×xX]/g,"*").replace(/[÷]/g,"/").replace(/[−–—]/g,"-").replace(/,/g,"");
-    joined=joined.replace(/=/g," ");
+    const equalsMatch=joined.match(/^(.*?)=\\s*([\\d.]+)\\s*$/);
+    if(equalsMatch){
+      if(!answer.value.trim())answer.value=equalsMatch[2];
+      joined=equalsMatch[1];
+    }
     const tokens=joined.match(/\d+(?:\.\d+)?|[+*/-]/g)||[];
     const candidate=tokens.join(" ").replace(/\s*([+*/-])\s*/g," $1 ").trim();
     if(/\d/.test(candidate)&&/^[\d.]+(?:\s[+*/-]\s[\d.]+)*$/.test(candidate))return candidate.replace(/\s+/g," ");
