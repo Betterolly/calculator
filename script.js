@@ -105,7 +105,14 @@
     return seen?String(total+group):null;
   };
   const speechExpression = transcript => {
-    const cleaned=transcript.toLowerCase()
+    // Speech recognizers sometimes merge number/operator words into brand-like
+    // tokens (for example, "oneplus"). In calculator mode, split those tokens
+    // before parsing so the first operand is not silently discarded.
+    const operatorWords="plus|minus|times|multiply|multiplied|divide|divided|add|added|subtract|jod|jama|ghata|ghatao|guna|bhaag|bhag";
+    const numberWordPattern="zero|oh|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety";
+    const normalized=String(transcript).toLowerCase()
+      .replace(new RegExp("\\b("+numberWordPattern+")("+operatorWords+")\\b","g"),"$1 $2");
+    const cleaned=normalized
       .replace(/[^a-z0-9.+\-×÷−\sऀ-ॿ]/g," ")
       .replace(/([+\-×÷−])/g," $1 ")
       .replace(/\b(please|calculate|equals?|equal to|what is|what's|the answer|how much|kitna|kitne|hota|hoti|hai|hain|batao|nikalo|karo|answer|is|what)\b/g," ")
