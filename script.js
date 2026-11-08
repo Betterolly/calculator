@@ -27,7 +27,7 @@
     });
   };
   const recordHistory=(expression,result)=>{
-    history.unshift({expression:String(expression).replace(/\\s*=\\s*$/,""),result:String(result),time:new Date().toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"short"})});
+    history.unshift({expression:String(expression).replace(/\s*=\s*$/,""),result:String(result),time:new Date().toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"short"})});
     history=history.slice(0,50);
     try{localStorage.setItem(HISTORY_KEY,JSON.stringify(history));}catch(_){}
     renderHistory();
