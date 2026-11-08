@@ -34,6 +34,10 @@
     if (!voiceEnabled || !("speechSynthesis" in window) || !text) return;
     try { const u=new SpeechSynthesisUtterance(String(text));u.lang="en-IN";u.rate=.92;u.pitch=1;window.speechSynthesis.speak(u); } catch (_) {}
   };
+  const speakCalculation = (expression, result) => {
+    const spoken = String(expression).replace(/×/g," multiplied by ").replace(/÷/g," divided by ").replace(/−/g," minus ").replace(/\+/g," plus ");
+    speak("Calculation: " + spoken + ". Result: " + result);
+  };
   const setVoice = on => {
     voiceEnabled=on;voiceToggle.setAttribute("aria-pressed",String(on));
     voiceLabel.textContent=on?"Voice on":"Voice off";
@@ -86,7 +90,7 @@
     const source=expressionText(),trace=[];
     const result=evaluate(source,trace);
     steps.push(...trace);saveStep(source+" =",fmt(result));current=String(result);tokens=[];justEvaluated=true;
-    message("Result saved · "+steps.length+" of 120 review steps");render();
+    message("Result saved · "+steps.length+" of 120 review steps");render();speakCalculation(source,fmt(result));
   };
   const clear=()=>{current="0";tokens=[];justEvaluated=false;modeLabel.textContent="STANDARD";message("Ready");render();};
   const clearEntry=()=>{current="0";justEvaluated=false;message("Current entry cleared");render();};
