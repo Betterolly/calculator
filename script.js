@@ -67,6 +67,7 @@
   const speechExpression = transcript => {
     const cleaned=transcript.toLowerCase()
       .replace(/[^a-z0-9.+\-×÷−\sऀ-ॿ]/g," ")
+      .replace(/([+\-×÷−])/g," $1 ")
       .replace(/\b(please|calculate|equals?|equal to|what is|what's|the answer|how much|kitna|kitne|hota|hoti|hai|hain|batao|nikalo|karo|answer|is|what)\b/g," ")
       .trim();
     const words=cleaned.split(/\s+/).filter(Boolean),atoms=[];
