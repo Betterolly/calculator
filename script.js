@@ -51,36 +51,61 @@
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const micToggle = $("#mic-toggle"), micLabel = $("#mic-label");
   let recognition = null, listening = false;
-  const smallNumbers = {zero:0,oh:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19};
-  const tensNumbers = {twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
-  const numberWords = new Set([...Object.keys(smallNumbers),...Object.keys(tensNumbers),"hundred","thousand"]);
+  const smallNumbers = {zero:0,oh:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,shunya:0,ek:1,do:2,teen:3,chaar:4,char:4,paanch:5,panch:5,chhe:6,che:6,saat:7,aath:8,aat:8,nau:9,das:10,gyarah:11,barah:12,terah:13,chaudah:14,pandrah:15,solah:16,satrah:17,atharah:18,unnis:19,"शून्य":0,"एक":1,"दो":2,"तीन":3,"चार":4,"पाँच":5,"पांच":5,"छह":6,"सात":7,"आठ":8,"नौ":9,"दस":10};
+  const tensNumbers = {twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90,bees:20,tees:30,chalis:40,chaalis:40,pachaas:50,saath:60,sattar:70,assi:80,navve:90,"बीस":20,"तीस":30,"चालीस":40,"पचास":50,"साठ":60,"सत्तर":70,"अस्सी":80,"नब्बे":90};
+  const numberWords = new Set([...Object.keys(smallNumbers),...Object.keys(tensNumbers),"hundred","thousand","sau","hazaar","हज़ार","हजार","सौ"]);
   const parseNumberWords = words => {
-    let total=0, group=0, seen=false;
+    let total=0,group=0,seen=false;
     for(const word of words){
       if(Object.prototype.hasOwnProperty.call(smallNumbers,word)){group+=smallNumbers[word];seen=true;}
       else if(Object.prototype.hasOwnProperty.call(tensNumbers,word)){group+=tensNumbers[word];seen=true;}
-      else if(word==="hundred"){group=Math.max(1,group)*100;seen=true;}
-      else if(word==="thousand"){total+=Math.max(1,group)*1000;group=0;seen=true;}
+      else if(word==="hundred"||word==="sau"||word==="सौ"){group=Math.max(1,group)*100;seen=true;}
+      else if(word==="thousand"||word==="hazaar"||word==="हज़ार"||word==="हजार"){total+=Math.max(1,group)*1000;group=0;seen=true;}
     }
     return seen?String(total+group):null;
   };
   const speechExpression = transcript => {
-    const words=transcript.toLowerCase().replace(/[^a-z0-9.\s]/g," ").replace(/\b(please|calculate|equals|equal to|what is|what's|the answer)\b/g," ").trim().split(/\s+/).filter(Boolean);
-    const out=[];let numberGroup=[];
-    const flush=()=>{if(numberGroup.length){out.push(parseNumberWords(numberGroup) ?? numberGroup.join(""));numberGroup=[];}};
-    const operators={plus:"+",add:"+",added:"+",minus:"−",subtract:"−",take:"−",times:"×",multiply:"×",multiplied:"×",into:"×",divide:"÷",divided:"÷",over:"÷"};
-    for(let i=0;i<words.length;i++){
-      const word=words[i];
+    const cleaned=transcript.toLowerCase().replace(/[^a-z0-9.\sऀ-ॿ]/g," ").replace(/\b(please|calculate|equals?|equal to|what is|what's|the answer|how much|kitna|kitne|hota|hoti|hai|hain|batao|nikalo|karo|answer|is|what)\b/g," ").trim();
+    const words=cleaned.split(/\s+/).filter(Boolean),atoms=[];
+    const operators={plus:"+",add:"+",added:"+",jod:"+",jama:"+",जोड़:"+",जमा:"+",minus:"−",subtract:"−",take:"−",ghata:"−",ghatao:"−",घटा:"−",घटाओ:"−",times:"×",multiply:"×",multiplied:"×",into:"×",guna:"×",गुना:"×",divide:"÷",divided:"÷",over:"÷",bhaag:"÷",bhag:"÷",भाग:"÷"};
+    let numberGroup=[];
+    const pushNumberGroup=()=>{
+      if(!numberGroup.length)return;
+      const hasScale=numberGroup.some(w=>["hundred","thousand","sau","hazaar","हज़ार","हजार","सौ"].includes(w));
+      const startsWithTens=Object.prototype.hasOwnProperty.call(tensNumbers,numberGroup[0]);
+      // Preserve compound numbers, but don't glue consecutive standalone digits together.
+      if(numberGroup.length>1&&!hasScale&&!startsWithTens){
+        for(const word of numberGroup)atoms.push({type:"number",value:String(smallNumbers[word])});
+      }else{
+        const value=parseNumberWords(numberGroup);
+        if(value!==null)atoms.push({type:"number",value});
+      }
+      numberGroup=[];
+    };
+    for(const word of words){
       if(numberWords.has(word)){numberGroup.push(word);continue;}
-      if(word==="point"||word==="dot"){flush();out.push(".");continue;}
-      if(operators[word]){flush();out.push(operators[word]);continue;}
-      if(/^\d+(?:\.\d+)?$/.test(word)){flush();out.push(word);continue;}
-      if(word==="and"){continue;}
-      flush();
+      if(word==="point"||word==="dot"||word==="दशमलव"){pushNumberGroup();atoms.push({type:"decimal"});continue;}
+      if(operators[word]){pushNumberGroup();atoms.push({type:"operator",value:operators[word]});continue;}
+      if(/^\d+(?:\.\d+)?$/.test(word)){pushNumberGroup();atoms.push({type:"number",value:word});continue;}
+      if(word==="and"||word==="aur"||word==="और")continue;
+      pushNumberGroup();
     }
-    flush();
-    const expression=out.join("");
-    if(!expression || !/^[\d.]+(?:[+−×÷][\d.]+)*$/.test(expression))throw new Error("I couldn't understand that. Try saying “2 plus 5 minus 67”.");
+    pushNumberGroup();
+    // Some mobile engines omit spoken operators and return "50 50".
+    // Treat distinct number chunks as separate addends, never as "5050".
+    let expression="",previous="start";
+    for(const atom of atoms){
+      if(atom.type==="number"){
+        if(previous==="number")expression+="+";
+        expression+=atom.value;previous="number";
+      }else if(atom.type==="decimal"){
+        if(previous!=="number")throw new Error("I couldn't understand the decimal point");
+        expression+=".";previous="decimal";
+      }else{
+        expression+=atom.value;previous="operator";
+      }
+    }
+    if(!expression||!/^[\d.]+(?:[+−×÷][\d.]+)*$/.test(expression))throw new Error("I couldn't understand that. Try saying “2 plus 5 minus 67”.");
     return expression;
   };
   const stopListening = () => {
