@@ -219,7 +219,12 @@
     const expr=()=>{let v=term();while(parts[i]==="+"||parts[i]==="-"){const left=v,op=parts[i++],r=term();v=op==="+"?v+r:v-r;trace.push({label:fmt(left)+(op==="+"?" + ":" − ")+fmt(r)+" =",result:fmt(v)});}return v;};
     const result=expr();if(i!==parts.length)throw new Error("Invalid calculation");if(!Number.isFinite(result))throw new Error("Invalid result");return Number(result.toFixed(10));
   };
-  const expressionText=()=>tokens.join(" ")+(entryStarted?(tokens.length?" ":"")+current:(!tokens.length?current:""));
+  const expressionText=()=>{
+    // The token list is the committed expression; current is the editable final operand.
+    // Never replace or discard an earlier operand when another operator is pressed.
+    if(!tokens.length)return current;
+    return tokens.join(" ")+(entryStarted?" "+current:"");
+  };
   const saveStep=(label,result)=>{
     steps.push({label,result:String(result)});if(steps.length>120)steps.shift();
     stepIndex=steps.length-1;
@@ -227,20 +232,26 @@
   const input=value=>{
     if(justEvaluated){current="0";tokens=[];justEvaluated=false;entryStarted=false;}
     if(value==="."&&current.includes("."))return;
-    if(value==="."&&current==="0"){current="0.";entryStarted=true;render();return;}
-    if(current==="0"&&value!=="0")current=value;
-    else if(current==="0"&&value==="0"){entryStarted=true;render();return;}
+    if(value==="."){
+      if(!entryStarted)current="0.";
+      else current+=".";
+      entryStarted=true;lastMrc=false;render();return;
+    }
+    if(!entryStarted || current==="0")current=value==="00"?"0":value;
     else current+=value;
     entryStarted=true;lastMrc=false;render();
   };
   const operator=op=>{
+    // Commit the currently typed operand before appending an operator.
+    // If the user presses two operators in a row, replace only the pending operator.
     if(justEvaluated){tokens=[current];justEvaluated=false;entryStarted=false;}
-    else if(!tokens.length)tokens.push(current);
+    else if(!tokens.length){tokens.push(current);}
     else if(/[+−×÷]$/.test(tokens[tokens.length-1])){
-      if(entryStarted)tokens.push(current);
-      else tokens[tokens.length-1]=op;
-    } else tokens.push(current);
-    if(tokens[tokens.length-1]!==op)tokens.push(op);
+      if(entryStarted){tokens.push(current);}
+      else {tokens[tokens.length-1]=op;current="0";render();return;}
+    }else if(entryStarted){tokens.push(current);}
+    else {throw new Error("Enter a number before choosing an operator");}
+    tokens.push(op);
     current="0";entryStarted=false;lastMrc=false;render();
   };
   const equals=()=>{
@@ -251,7 +262,11 @@
     message("Result saved · "+steps.length+" of 120 review steps");render();speakCalculation(source,fmt(result));
   };
   const clear=()=>{current="0";tokens=[];justEvaluated=false;entryStarted=false;modeLabel.textContent="STANDARD";message("Ready");render();};
-  const clearEntry=()=>{current="0";justEvaluated=false;entryStarted=false;message("Current entry cleared");render();};
+  const clearEntry=()=>{
+    // CE clears only the number being entered; earlier operands/operators remain intact.
+    current="0";entryStarted=false;justEvaluated=false;
+    message(tokens.length?"Current entry cleared · expression preserved":"Current entry cleared");render();
+  };
   const showStep=()=>{
     const item=steps[stepIndex];if(!item)return;
     expressionView.textContent=item.label;display.textContent=item.result;display.classList.add("review-result");
@@ -290,7 +305,8 @@
     const amount=raw(),result=direction==="add"?amount*(1+gstRate/100):amount/(1+gstRate/100);
     const label=fmt(amount)+(direction==="add"?" + GST ":" − GST ")+gstRate+"%";
     saveStep(label+" =",fmt(result));recordHistory(label,fmt(result));
-    current=String(Number(result.toFixed(10)));tokens=[];justEvaluated=true;entryStarted=false;
+    // GST transforms the current operand without discarding earlier pending operations.
+    current=String(Number(result.toFixed(10)));entryStarted=true;justEvaluated=false;
     modeLabel.textContent="GST "+gstRate+"%";message(direction==="add"?"GST added at "+gstRate+"%":"GST removed at "+gstRate+"%");render();
   };
   const handle=action=>{
@@ -299,7 +315,17 @@
         case "clear":clear();break;
         case "clear-entry":clearEntry();break;
         case "sign":current=String(-raw());entryStarted=true;render();break;
-        case "percent":current=String(raw()/100);entryStarted=true;message("Converted to percentage");render();break;
+        case "percent":{
+          const amount=raw();
+          const last=tokens[tokens.length-1];
+          const previous=tokens.length>1?Number(tokens[tokens.length-2]):NaN;
+          // For +/−, calculate a percentage of the preceding amount (e.g. 200 + 10% = 220).
+          // For ×/÷ and standalone %, use the decimal percentage value.
+          const result=(last==="+"||last==="−")&&Number.isFinite(previous)
+            ? previous*amount/100 : amount/100;
+          current=String(Number(result.toFixed(10)));entryStarted=true;justEvaluated=false;
+          message("Percentage applied");render();break;
+        }
         case "sqrt":{const n=raw();if(n<0)throw new Error("Square root needs a non-negative number");const result=Math.sqrt(n);saveStep("√("+fmt(n)+") =",fmt(result));recordHistory("√("+fmt(n)+")",fmt(result));current=String(result);tokens=[];justEvaluated=true;entryStarted=false;message("Square root calculated");render();break;}
         case "equals":equals();break;
         case "gst-plus":gst("add");break;
@@ -335,7 +361,11 @@
     if(/^[0-9.]$/.test(k)){speak(k==="."?"decimal point":k);input(k);}
     else if(k==="Enter"||k==="="){speak("equals");handle("equals");}
     else if(k==="Escape"){speak("all clear");clear();}
-    else if(k==="Backspace"){current=current.length>1?current.slice(0,-1):"0";render();}
+    else if(k==="Backspace"){
+      if(justEvaluated){current="0";tokens=[];justEvaluated=false;entryStarted=false;}
+      else if(entryStarted){current=current.length>1?current.slice(0,-1):"0";if(current==="-"||current==="")current="0";if(current==="0")entryStarted=false;}
+      render();
+    }
     else if(k==="+"||k==="-"||k==="*"||k==="/"){event.preventDefault();speak(({ "+":"plus","-":"minus","*":"multiply","/":"divide"})[k]);operator(({ "+":"+","-":"−","*":"×","/":"÷"})[k]);}
     else if(k==="%"){speak("percent");handle("percent");}
   });
