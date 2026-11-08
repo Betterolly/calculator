@@ -205,15 +205,28 @@
   // Recursive-descent parser: multiplication/division take precedence over addition/subtraction.
   const evaluate = (source, trace=[]) => {
     const s=source.replace(/×/g,"*").replace(/÷/g,"/").replace(/−/g,"-").replace(/,/g,"").replace(/\s+/g,"");
-    const parts=s.match(/(?:\d+(?:\.\d*)?|\.\d+)|[()+\-*/]/g)||[];
+    const parts=s.match(/(?:\d+(?:\.\d*)?|\.\d+)|[()+\-*/^]/g)||[];
     if(parts.join("")!==s || !parts.length)throw new Error("Check the calculation and try again");
     let i=0;
-    const factor=()=>{
-      if(parts[i]==="+"){i++;return factor();}
-      if(parts[i]==="-"){i++;return -factor();}
+    const atom=()=>{
       if(parts[i]==="("){i++;const v=expr();if(parts[i++]!==")")throw new Error("Missing closing bracket");return v;}
       const p=parts[i++];if(!p||!/^\d*\.?\d+$/.test(p))throw new Error("Incomplete calculation");
       return Number(p);
+    };
+    const power=()=>{
+      const base=atom();
+      if(parts[i]==="^"){
+        i++;const exponent=factor(),value=Math.pow(base,exponent);
+        if(!Number.isFinite(value))throw new Error("Invalid power operation");
+        trace.push({label:fmt(base)+" ^ "+fmt(exponent)+" =",result:fmt(value)});
+        return value;
+      }
+      return base;
+    };
+    const factor=()=>{
+      if(parts[i]==="+"){i++;return factor();}
+      if(parts[i]==="-"){i++;return -factor();}
+      return power();
     };
     const term=()=>{let v=factor();while(parts[i]==="*"||parts[i]==="/"){const left=v,op=parts[i++],r=factor();if(op==="/"&&r===0)throw new Error("Cannot divide by zero");v=op==="*"?v*r:v/r;trace.push({label:fmt(left)+(op==="*"?" × ":" ÷ ")+fmt(r)+" =",result:fmt(v)});}return v;};
     const expr=()=>{let v=term();while(parts[i]==="+"||parts[i]==="-"){const left=v,op=parts[i++],r=term();v=op==="+"?v+r:v-r;trace.push({label:fmt(left)+(op==="+"?" + ":" − ")+fmt(r)+" =",result:fmt(v)});}return v;};
@@ -366,7 +379,7 @@
       else if(entryStarted){current=current.length>1?current.slice(0,-1):"0";if(current==="-"||current==="")current="0";if(current==="0")entryStarted=false;}
       render();
     }
-    else if(k==="+"||k==="-"||k==="*"||k==="/"){event.preventDefault();speak(({ "+":"plus","-":"minus","*":"multiply","/":"divide"})[k]);operator(({ "+":"+","-":"−","*":"×","/":"÷"})[k]);}
+    else if(k==="+"||k==="-"||k==="*"||k==="/"||k==="^"){event.preventDefault();speak(({ "+":"plus","-":"minus","*":"multiply","/":"divide","^":"to the power of"})[k]);operator(({ "+":"+","-":"−","*":"×","/":"÷","^":"^"})[k]);}
     else if(k==="%"){speak("percent");handle("percent");}
   });
   render();
