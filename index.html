@@ -16,6 +16,7 @@
     <header class="topbar">
       <div class="brand-mark" aria-hidden="true">▦</div>
       <div class="brand-copy"><p class="eyebrow">EVERYDAY BUSINESS TOOL</p><h1>Calculator</h1></div>
+      <button class="scan-toggle" id="scan-toggle" type="button" title="Scan a handwritten calculation"><span aria-hidden="true">▧</span><span>Scan</span></button>
       <button class="mic-toggle" id="mic-toggle" type="button" aria-pressed="false" title="Speak a calculation"><span aria-hidden="true">🎙</span><span id="mic-label">Speak</span></button>
       <button class="sound-toggle" id="voice-toggle" type="button" aria-pressed="true" title="Turn spoken button feedback off"><span class="sound-symbol" aria-hidden="true">◖</span><span id="voice-label">Voice on</span></button>
       <span class="local-tag">Local</span>
@@ -69,6 +70,24 @@
     </section>
     <footer>History is saved in this browser on this device.</footer>
   </main>
+  <dialog id="scan-dialog" class="scan-dialog" aria-labelledby="scan-title">
+    <form method="dialog" class="scan-card">
+      <div class="scan-heading"><div><p class="eyebrow">PAPER CALCULATION CHECK</p><h2 id="scan-title">Scan numbers</h2></div><button class="scan-close" value="cancel" aria-label="Close">×</button></div>
+      <p class="scan-help">Take a photo of the paper. Check every recognized number and operator before calculating.</p>
+      <label class="scan-camera" for="scan-file"><span aria-hidden="true">📷</span><span id="scan-file-label">Open camera / choose photo</span></label>
+      <input id="scan-file" type="file" accept="image/*" capture="environment">
+      <p id="scan-progress" class="scan-progress" role="status">Your photo is processed in this browser. Handwriting recognition may be imperfect.</p>
+      <label class="scan-field-label" for="scan-raw">Recognized text (editable)</label>
+      <textarea id="scan-raw" rows="4" placeholder="OCR text will appear here…"></textarea>
+      <label class="scan-field-label" for="scan-expression">Calculation to verify (editable)</label>
+      <textarea id="scan-expression" rows="2" placeholder="Example: 1250 + 480 - 230"></textarea>
+      <label class="scan-field-label" for="scan-answer">Answer written on paper</label>
+      <input id="scan-answer" type="text" inputmode="decimal" placeholder="Example: 1,500">
+      <div id="scan-result" class="scan-result" aria-live="polite"></div>
+      <div class="scan-actions"><button type="button" id="scan-verify" class="scan-primary">OK · Calculate & verify</button></div>
+    </form>
+  </dialog>
   <script src="./script.js?v=engine-4"></script>
+  <script src="./scan.js?v=scan-1"></script>
 </body>
 </html>
