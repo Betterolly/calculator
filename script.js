@@ -3,8 +3,48 @@
   const display=$("#display"), expressionView=$("#expression"), status=$("#status");
   const memoryIndicator=$("#memory-indicator"), modeLabel=$("#mode-label");
   const voiceToggle=$("#voice-toggle"), voiceLabel=$("#voice-label");
-  let current="0", tokens=[], memory=0, gstRate=18, justEvaluated=false;
+  let current="0", tokens=[], memory=0, gstRate=18, justEvaluated=false, entryStarted=false;
   let steps=[], stepIndex=-1, replayTimer=null, voiceEnabled=true, lastMrc=false;
+  const HISTORY_KEY="betterolly-calculator-history-v1";
+  let history=[];
+  try {
+    const saved=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]");
+    if(Array.isArray(saved))history=saved.filter(item=>item&&typeof item.expression==="string"&&typeof item.result==="string").slice(0,50);
+  } catch (_) { history=[]; }
+  const historyList=$("#history-list"), historyEmpty=$("#history-empty"), historyClear=$("#history-clear");
+  const renderHistory=()=>{
+    if(!historyList)return;
+    historyList.replaceChildren();
+    historyEmpty.hidden=history.length>0;
+    historyClear.disabled=history.length===0;
+    history.forEach((item,index)=>{
+      const button=document.createElement("button");
+      button.type="button";button.className="history-item";button.dataset.historyIndex=String(index);
+      const expression=document.createElement("span");expression.className="history-expression";expression.textContent=item.expression;
+      const result=document.createElement("strong");result.className="history-result";result.textContent=item.result;
+      const date=document.createElement("small");date.className="history-date";date.textContent=item.time||"";
+      button.append(expression,result,date);historyList.append(button);
+    });
+  };
+  const recordHistory=(expression,result)=>{
+    history.unshift({expression:String(expression).replace(/\\s*=\\s*$/,""),result:String(result),time:new Date().toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"short"})});
+    history=history.slice(0,50);
+    try{localStorage.setItem(HISTORY_KEY,JSON.stringify(history));}catch(_){}
+    renderHistory();
+  };
+  if(historyClear)historyClear.addEventListener("click",()=>{
+    history=[];try{localStorage.removeItem(HISTORY_KEY);}catch(_){}
+    renderHistory();message("Calculation history cleared");
+  });
+  if(historyList)historyList.addEventListener("click",event=>{
+    const button=event.target.closest("[data-history-index]");
+    if(!button)return;
+    const item=history[Number(button.dataset.historyIndex)];
+    if(!item)return;
+    current=item.result.replace(/,/g,"");tokens=[];entryStarted=false;justEvaluated=true;
+    expressionView.textContent=item.expression+" =";display.textContent=item.result;display.classList.remove("review-result");
+    message("History result restored to calculator");
+  });
 
   const message = value => { status.textContent=value; };
   const fmt = value => {
@@ -21,7 +61,7 @@
     const n=Number(current);
     display.classList.remove("review-result");
     display.textContent=current!=="" && Number.isFinite(n) ? fmt(n) : current;
-    expressionView.textContent=tokens.length ? tokens.join(" ") + (/[+−×÷]$/.test(tokens[tokens.length-1]) ? "" : " "+current) : "";
+    expressionView.textContent=tokens.length ? tokens.join(" ") + (entryStarted ? " "+current : "") : "";
     memoryIndicator.textContent=memory!==0?"M":"";
   };
   const stopReplay = () => { if(replayTimer!==null){clearInterval(replayTimer);replayTimer=null;} };
@@ -122,11 +162,12 @@
   const processSpokenCalculation = transcript => {
     try{
       const expression=speechExpression(transcript);
-      tokens=[];current="0";justEvaluated=false;
+      tokens=[];current="0";justEvaluated=false;entryStarted=false;
       const trace=[],result=evaluate(expression,trace);
       trace.forEach(step=>{steps.push(step);if(steps.length>119)steps.shift();});
       saveStep(expression+" =",fmt(result));
-      expressionView.textContent=expression+" =";current=String(result);justEvaluated=true;
+      recordHistory(expression,fmt(result));
+      expressionView.textContent=expression+" =";current=String(result);justEvaluated=true;entryStarted=false;
       message("Heard: "+expression+" · result saved");render();speakCalculation(expression,fmt(result));
     }catch(error){message(error.message||"Could not understand that calculation");speak("Sorry, I could not understand that calculation");}
   };
@@ -178,36 +219,39 @@
     const expr=()=>{let v=term();while(parts[i]==="+"||parts[i]==="-"){const left=v,op=parts[i++],r=term();v=op==="+"?v+r:v-r;trace.push({label:fmt(left)+(op==="+"?" + ":" − ")+fmt(r)+" =",result:fmt(v)});}return v;};
     const result=expr();if(i!==parts.length)throw new Error("Invalid calculation");if(!Number.isFinite(result))throw new Error("Invalid result");return Number(result.toFixed(10));
   };
-  const expressionText=()=>tokens.join(" ")+(tokens.length?" ":"")+current;
+  const expressionText=()=>tokens.join(" ")+(entryStarted?(tokens.length?" ":"")+current:(!tokens.length?current:""));
   const saveStep=(label,result)=>{
     steps.push({label,result:String(result)});if(steps.length>120)steps.shift();
     stepIndex=steps.length-1;
   };
   const input=value=>{
-    if(justEvaluated){current="0";tokens=[];justEvaluated=false;}
+    if(justEvaluated){current="0";tokens=[];justEvaluated=false;entryStarted=false;}
     if(value==="."&&current.includes("."))return;
     if(value==="."&&current==="0"){current="0.";render();return;}
     if(current==="0"&&value!=="0")current=value;
     else if(current==="0"&&value==="0")return;
     else current+=value;
-    lastMrc=false;render();
+    entryStarted=true;lastMrc=false;render();
   };
   const operator=op=>{
-    if(justEvaluated){tokens=[current];justEvaluated=false;}
+    if(justEvaluated){tokens=[current];justEvaluated=false;entryStarted=false;}
     else if(!tokens.length)tokens.push(current);
-    else if(/[+−×÷]$/.test(tokens[tokens.length-1]))tokens[tokens.length-1]=op;
-    else tokens.push(current);
+    else if(/[+−×÷]$/.test(tokens[tokens.length-1])){
+      if(entryStarted)tokens.push(current);
+      else tokens[tokens.length-1]=op;
+    } else tokens.push(current);
     if(tokens[tokens.length-1]!==op)tokens.push(op);
-    current="0";lastMrc=false;render();
+    current="0";entryStarted=false;lastMrc=false;render();
   };
   const equals=()=>{
     const source=expressionText(),trace=[];
     const result=evaluate(source,trace);
-    steps.push(...trace);saveStep(source+" =",fmt(result));current=String(result);tokens=[];justEvaluated=true;
+    steps.push(...trace);saveStep(source+" =",fmt(result));recordHistory(source,fmt(result));
+    current=String(result);tokens=[];justEvaluated=true;entryStarted=false;
     message("Result saved · "+steps.length+" of 120 review steps");render();speakCalculation(source,fmt(result));
   };
-  const clear=()=>{current="0";tokens=[];justEvaluated=false;modeLabel.textContent="STANDARD";message("Ready");render();};
-  const clearEntry=()=>{current="0";justEvaluated=false;message("Current entry cleared");render();};
+  const clear=()=>{current="0";tokens=[];justEvaluated=false;entryStarted=false;modeLabel.textContent="STANDARD";message("Ready");render();};
+  const clearEntry=()=>{current="0";justEvaluated=false;entryStarted=false;message("Current entry cleared");render();};
   const showStep=()=>{
     const item=steps[stepIndex];if(!item)return;
     expressionView.textContent=item.label;display.textContent=item.result;display.classList.add("review-result");
@@ -245,7 +289,8 @@
   const gst=direction=>{
     const amount=raw(),result=direction==="add"?amount*(1+gstRate/100):amount/(1+gstRate/100);
     const label=fmt(amount)+(direction==="add"?" + GST ":" − GST ")+gstRate+"%";
-    saveStep(label+" =",fmt(result));current=String(Number(result.toFixed(10)));tokens=[];justEvaluated=true;
+    saveStep(label+" =",fmt(result));recordHistory(label,fmt(result));
+    current=String(Number(result.toFixed(10)));tokens=[];justEvaluated=true;entryStarted=false;
     modeLabel.textContent="GST "+gstRate+"%";message(direction==="add"?"GST added at "+gstRate+"%":"GST removed at "+gstRate+"%");render();
   };
   const handle=action=>{
@@ -255,7 +300,7 @@
         case "clear-entry":clearEntry();break;
         case "sign":current=String(-raw());render();break;
         case "percent":current=String(raw()/100);message("Converted to percentage");render();break;
-        case "sqrt":{const n=raw();if(n<0)throw new Error("Square root needs a non-negative number");const result=Math.sqrt(n);saveStep("√("+fmt(n)+") =",fmt(result));current=String(result);tokens=[];justEvaluated=true;message("Square root calculated");render();break;}
+        case "sqrt":{const n=raw();if(n<0)throw new Error("Square root needs a non-negative number");const result=Math.sqrt(n);saveStep("√("+fmt(n)+") =",fmt(result));recordHistory("√("+fmt(n)+")",fmt(result));current=String(result);tokens=[];justEvaluated=true;entryStarted=false;message("Square root calculated");render();break;}
         case "equals":equals();break;
         case "gst-plus":gst("add");break;
         case "gst-minus":gst("remove");break;
@@ -295,4 +340,5 @@
     else if(k==="%"){speak("percent");handle("percent");}
   });
   render();
+  renderHistory();
 })();
