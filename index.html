@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f5f8">
+  <meta name="description" content="A clean, familiar business calculator with GST and calculation review.">
+  <title>Business Calculator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand-mark" aria-hidden="true">▦</div>
+      <div><p class="eyebrow">EVERYDAY BUSINESS TOOL</p><h1>Calculator</h1></div>
+      <span class="local-tag">Local</span>
+    </header>
+
+    <section class="calculator" aria-label="Business calculator">
+      <div class="display-wrap">
+        <div class="display-meta"><span id="mode-label">STANDARD</span><span id="memory-indicator"></span></div>
+        <div id="expression" class="expression" aria-live="polite"></div>
+        <output id="display" class="display" aria-live="polite">0</output>
+      </div>
+
+      <div class="keypad">
+        <button class="key utility" data-action="gst-plus">GST+</button>
+        <button class="key utility" data-action="gst-minus">GST−</button>
+        <button class="key utility" data-action="rate">RATE</button>
+        <button class="key utility" data-action="sign">+/−</button>
+
+        <button class="key utility" data-action="clear-entry">CE</button>
+        <button class="key utility" data-action="clear">ON/AC</button>
+        <button class="key utility" data-action="percent">%</button>
+        <button class="key operator" data-value="÷">÷</button>
+
+        <button class="key" data-value="7">7</button><button class="key" data-value="8">8</button>
+        <button class="key" data-value="9">9</button><button class="key operator" data-value="×">×</button>
+
+        <button class="key" data-value="4">4</button><button class="key" data-value="5">5</button>
+        <button class="key" data-value="6">6</button><button class="key operator" data-value="−">−</button>
+
+        <button class="key" data-value="1">1</button><button class="key" data-value="2">2</button>
+        <button class="key" data-value="3">3</button><button class="key operator" data-value="+">+</button>
+
+        <button class="key memory" data-action="memory-recall">MRC</button>
+        <button class="key memory" data-action="memory-minus">M−</button>
+        <button class="key memory" data-action="memory-plus">M+</button>
+        <button class="key" data-value="00">00</button>
+
+        <button class="key" data-value="0">0</button>
+        <button class="key" data-value=".">.</button>
+        <button class="key utility" data-action="sqrt">√</button>
+        <button class="key equals" data-action="equals">=</button>
+      </div>
+
+      <div class="review-bar" aria-label="Calculation review">
+        <button class="review-key" data-action="check-prev">‹ <span>CHECK</span></button>
+        <button class="review-key" data-action="check-next"><span>CHECK</span> ›</button>
+        <button class="review-key" data-action="correct">CORRECT</button>
+        <button class="review-key" data-action="replay">AUTO REPLAY</button>
+      </div>
+      <p id="status" class="status" role="status">Ready</p>
+    </section>
+
+    <footer>Calculations stay in this browser on this device.</footer>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
