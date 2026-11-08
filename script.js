@@ -355,8 +355,8 @@
           const hasPendingExpression=tokens.length>0;
           if(!hasPendingExpression)recordHistory(label,fmt(result));
           current=String(Number(result.toFixed(10)));
-          entryStarted=true;
-          justEvaluated=false;
+          entryStarted=hasPendingExpression;
+          justEvaluated=!hasPendingExpression;
           message("Square root calculated");
           render();
           break;
