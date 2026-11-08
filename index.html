@@ -25,17 +25,35 @@
         <div id="expression" class="expression" aria-live="polite"></div>
         <output id="display" class="display" aria-live="polite">0</output>
       </div>
-      <div class="keypad">
-        <button class="key utility" data-action="gst-plus">GST+</button><button class="key utility" data-action="gst-minus">GST−</button><button class="key utility" data-action="rate">RATE</button><button class="key utility" data-action="sign">+/−</button>
-        <button class="key utility" data-action="clear-entry">CE</button><button class="key utility" data-action="clear">ON/AC</button><button class="key utility" data-action="percent">%</button><button class="key operator" data-value="÷">÷</button>
-        <button class="key" data-value="7">7</button><button class="key" data-value="8">8</button><button class="key" data-value="9">9</button><button class="key operator" data-value="×">×</button>
-        <button class="key" data-value="4">4</button><button class="key" data-value="5">5</button><button class="key" data-value="6">6</button><button class="key operator" data-value="−">−</button>
-        <button class="key" data-value="1">1</button><button class="key" data-value="2">2</button><button class="key" data-value="3">3</button><button class="key operator" data-value="+">+</button>
-        <button class="key memory" data-action="memory-recall">MRC</button><button class="key memory" data-action="memory-minus">M−</button><button class="key memory" data-action="memory-plus">M+</button><button class="key" data-value="00">00</button>
-        <button class="key" data-value="0">0</button><button class="key" data-value=".">.</button><button class="key utility" data-action="sqrt">√</button><button class="key equals" data-action="equals">=</button>
+
+      <div class="review-strip" aria-label="120 step check">
+        <div class="review-buttons">
+          <button class="review-key" data-action="check-prev"><span>CHECK</span><b>←</b></button>
+          <button class="review-key" data-action="check-next"><span>CHECK</span><b>→</b></button>
+          <button class="review-key" data-action="correct"><span>CORRECT</span><b>▤</b></button>
+          <button class="review-key" data-action="replay"><span>AUTO</span><b>REPLAY</b></button>
+        </div>
+        <div class="step-caption">120 STEPS CHECK</div>
       </div>
-      <div class="review-bar" aria-label="Calculation review">
-        <button class="review-key" data-action="check-prev">‹ <span>CHECK</span></button><button class="review-key" data-action="check-next"><span>CHECK</span> ›</button><button class="review-key" data-action="correct">CORRECT</button><button class="review-key" data-action="replay">AUTO REPLAY</button>
+
+      <div class="keypad" aria-label="Calculator keypad">
+        <button class="key gst" data-action="gst-plus">GST +</button>
+        <button class="key number" data-value="7">7</button><button class="key number" data-value="8">8</button><button class="key number" data-value="9">9</button>
+        <button class="key operation" data-value="÷">÷</button><button class="key function" data-action="sqrt">√</button><button class="key power" data-action="clear">ON<br>AC</button>
+
+        <button class="key gst" data-action="gst-minus">GST −</button>
+        <button class="key number" data-value="4">4</button><button class="key number" data-value="5">5</button><button class="key number" data-value="6">6</button>
+        <button class="key operation" data-value="×">×</button><button class="key function" data-action="percent">%</button><button class="key memory" data-action="memory-recall">Mᴿᶜ</button>
+
+        <button class="key gst" data-action="rate">RATE</button>
+        <button class="key number" data-value="1">1</button><button class="key number" data-value="2">2</button><button class="key number" data-value="3">3</button>
+        <button class="key operation" data-value="+">+</button><button class="key operation" data-value="−">−</button><button class="key memory" data-action="memory-minus">M−</button>
+
+        <button class="key sign" data-action="sign">+/−</button>
+        <button class="key number bottom-number" data-value="0">0</button><button class="key number bottom-number" data-value="00">00</button><button class="key number bottom-number" data-value=".">.</button>
+        <button class="key equals" data-action="equals">=</button><button class="key memory bottom-memory" data-action="memory-plus">M+</button>
+
+        <button class="key clear-entry" data-action="clear-entry">CE</button>
       </div>
       <p id="status" class="status" role="status">Ready</p>
     </section>
