@@ -132,24 +132,24 @@
   };
   if(SpeechRecognition){
     recognition=new SpeechRecognition();recognition.lang="en-IN";recognition.interimResults=true;recognition.continuous=false;
-    let finalTranscript="";
-    recognition.onstart=()=>{finalTranscript="";listening=true;micToggle.setAttribute("aria-pressed","true");micToggle.classList.add("listening");micLabel.textContent="Listening";message("Listening · say your calculation");};
+    let recognizedSegments=[];
+    recognition.onstart=()=>{recognizedSegments=[];listening=true;micToggle.setAttribute("aria-pressed","true");micToggle.classList.add("listening");micLabel.textContent="Listening";message("Listening · say your calculation");};
     recognition.onresult=event=>{
       let interim="";
-      finalTranscript="";
-      // Collect every finalized segment, but wait until recognition ends before parsing.
-      // This prevents an early finalized "1" from being treated as the whole calculation.
+      // Keep the latest text for every result slot, including interim slots.
+      // Some engines finalize the first spoken number later than the rest.
       for(let i=0;i<event.results.length;i++){
-        const text=event.results[i][0].transcript;
-        if(event.results[i].isFinal)finalTranscript+=text+" ";
-        else interim+=text;
+        const text=event.results[i][0].transcript.trim();
+        recognizedSegments[i]=text;
+        if(!event.results[i].isFinal)interim+=text+" ";
       }
-      if(interim)message("Hearing: "+interim);
-      else if(finalTranscript.trim())message("Recognized: "+finalTranscript.trim());
+      const preview=recognizedSegments.filter(Boolean).join(" ").trim();
+      if(interim.trim())message("Hearing: "+preview);
+      else if(preview)message("Recognized: "+preview);
     };
     recognition.onerror=event=>{resetMicUI();message(event.error==="not-allowed"?"Microphone permission is blocked. Allow it in your browser settings.":"Voice input error · "+event.error);};
     recognition.onend=()=>{
-      const transcript=finalTranscript.trim();
+      const transcript=recognizedSegments.filter(Boolean).join(" ").trim();
       const shouldProcess=listening;
       resetMicUI();
       if(shouldProcess&&transcript)processSpokenCalculation(transcript);
