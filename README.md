@@ -23,14 +23,20 @@ The SVG manifest icon is a scalable icon source. Some browser/device install flo
 
 - Familiar four-column physical-calculator keypad
 - GST addition/removal and editable GST rate
-- Basic arithmetic, percentage, square root, sign change
+- BODMAS/PEDMAS arithmetic with brackets, powers, decimals and sign change
+- Percentage calculations, square root, GST addition/removal and editable GST rate
 - Memory keys (MRC, M−, M+)
 - Calculation review controls with a 120-step in-memory review list
+- Persistent recent history stored locally in the browser (up to 50 calculations)
 - Responsive light interface
 - Keyboard input
 
-## Current prototype limitations
+## Current limitations
 
-This is an initial interface prototype. Calculation history is currently kept in memory and is cleared when the page is refreshed. The review controls are a basic prototype; persistent searchable history, robust expression parsing, OCR, voice input, and full step correction/replay are not implemented yet.
+- History is stored locally in the current browser/device; it is not synced across devices and can be cleared by clearing site data.
+- The review list is in memory and resets when the page is refreshed.
+- Power operations are supported through keyboard input (`^`), but there is no dedicated power key on the keypad.
+- Percentage behavior follows common calculator conventions; confirm the displayed expression for business-critical calculations.
+- Correction/replay is still a basic review workflow, not a full audit trail with automatic downstream recalculation.
 
-For financial use, verify results independently until the calculation engine has been fully tested.
+For financial use, independently verify important results until the app has been tested on the target device with real business examples.
