@@ -171,8 +171,10 @@
       const expression=speechExpression(transcript);
       tokens=[];current="0";justEvaluated=false;entryStarted=false;
       const trace=[],result=evaluate(expression,trace);
+      const groupId="calc-"+Date.now()+"-"+steps.length;
+      trace.forEach(item=>{item.groupId=groupId;item.expression=expression;});
       appendSteps(trace);
-      saveStep(expression+" =",fmt(result));
+      saveStep(expression+" =",fmt(result),{groupId,expression});
       recordHistory(expression,fmt(result));
       expressionView.textContent=expression+" =";current=String(result);justEvaluated=true;entryStarted=false;
       message("Heard: "+expression+" · result saved");render();speakCalculation(expression,fmt(result));
@@ -250,8 +252,8 @@
     }
     stepIndex=steps.length-1;
   };
-  const saveStep=(label,result)=>{
-    appendSteps([{label,result:String(result)}]);
+  const saveStep=(label,result,metadata={})=>{
+    appendSteps([{label,result:String(result),...metadata}]);
   };
   const input=value=>{
     if(justEvaluated){current="0";tokens=[];justEvaluated=false;entryStarted=false;}
@@ -281,7 +283,9 @@
   const equals=()=>{
     const source=expressionText(),trace=[];
     const result=evaluate(source,trace);
-    appendSteps(trace);saveStep(source+" =",fmt(result));recordHistory(source,fmt(result));
+    const groupId="calc-"+Date.now()+"-"+steps.length;
+    trace.forEach(item=>{item.groupId=groupId;item.expression=source;});
+    appendSteps(trace);saveStep(source+" =",fmt(result),{groupId,expression:source});recordHistory(source,fmt(result));
     current=String(result);tokens=[];justEvaluated=true;entryStarted=false;
     message("Result saved · "+steps.length+" of 120 review steps");render();speakCalculation(source,fmt(result));
   };
@@ -309,11 +313,28 @@
       steps[stepIndex]={label:fmt(amount)+(gstMatch[2]==="+"?" + GST ":" − GST ")+rate+"% = (corrected)",result:fmt(result)};
       gstRate=rate;current=String(Number(result.toFixed(10)));tokens=[];justEvaluated=true;showStep();message("GST step corrected and recalculated");return;
     }
-    const revised=prompt("Correct the calculation expression:",item.label.replace(/\s*=\s*$/,""));
+    const revised=prompt(
+      item.expression?"Correct the full calculation expression:":"Correct this calculation step:",
+      item.expression||item.label.replace(/\s*=\s*$/,"")
+    );
     if(revised===null)return;
-    const result=evaluate(revised);
-    steps[stepIndex]={label:revised+" = (corrected)",result:fmt(result)};
-    current=String(result);tokens=[];justEvaluated=true;showStep();message("Step corrected and recalculated");
+    const correctedTrace=[];
+    const result=evaluate(revised,correctedTrace);
+    if(item.groupId){
+      // Replace every review step belonging to this calculation, not just
+      // the selected intermediate line, so CHECK and AUTO show consistent results.
+      const firstIndex=steps.findIndex(step=>step.groupId===item.groupId);
+      const groupId="calc-"+Date.now()+"-"+firstIndex;
+      correctedTrace.forEach(step=>{step.groupId=groupId;step.expression=revised;});
+      const correctedGroup=[...correctedTrace,{label:revised+" = (corrected)",result:fmt(result),groupId,expression:revised}];
+      const retained=steps.filter(step=>step.groupId!==item.groupId);
+      retained.splice(Math.max(0,firstIndex),0,...correctedGroup);
+      steps=retained.slice(-120);
+      stepIndex=steps.findIndex(step=>step.groupId===groupId&&step.label.includes("(corrected)"));
+    }else{
+      steps[stepIndex]={label:revised+" = (corrected)",result:fmt(result)};
+    }
+    current=String(result);tokens=[];justEvaluated=true;showStep();message("Calculation corrected and all its review steps recalculated");
   };
   const replay=()=>{
     stopReplay();
