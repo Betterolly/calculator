@@ -65,7 +65,10 @@
     return seen?String(total+group):null;
   };
   const speechExpression = transcript => {
-    const cleaned=transcript.toLowerCase().replace(/[^a-z0-9.\sऀ-ॿ]/g," ").replace(/\b(please|calculate|equals?|equal to|what is|what's|the answer|how much|kitna|kitne|hota|hoti|hai|hain|batao|nikalo|karo|answer|is|what)\b/g," ").trim();
+    const cleaned=transcript.toLowerCase()
+      .replace(/[^a-z0-9.+\-×÷−\sऀ-ॿ]/g," ")
+      .replace(/\b(please|calculate|equals?|equal to|what is|what's|the answer|how much|kitna|kitne|hota|hoti|hai|hain|batao|nikalo|karo|answer|is|what)\b/g," ")
+      .trim();
     const words=cleaned.split(/\s+/).filter(Boolean),atoms=[];
     const operators={plus:"+",add:"+",added:"+",jod:"+",jama:"+",जोड़:"+",जमा:"+",minus:"−",subtract:"−",take:"−",ghata:"−",ghatao:"−",घटा:"−",घटाओ:"−",times:"×",multiply:"×",multiplied:"×",into:"×",guna:"×",गुना:"×",divide:"÷",divided:"÷",over:"÷",bhaag:"÷",bhag:"÷",भाग:"÷"};
     let numberGroup=[];
@@ -117,7 +120,13 @@
     recognition.onstart=()=>{listening=true;micToggle.setAttribute("aria-pressed","true");micToggle.classList.add("listening");micLabel.textContent="Listening";message("Listening · say your calculation");};
     recognition.onresult=event=>{
       let interim="",finalText="";
-      for(let i=event.resultIndex;i<event.results.length;i++){const text=event.results[i][0].transcript;if(event.results[i].isFinal)finalText+=text;else interim+=text;}
+      // SpeechRecognition may finalize the first word/number in an earlier result.
+      // Always rebuild the full utterance from every result so the leading operand is not lost.
+      for(let i=0;i<event.results.length;i++){
+        const text=event.results[i][0].transcript;
+        if(event.results[i].isFinal)finalText+=text+" ";
+        else interim+=text;
+      }
       if(interim)message("Hearing: "+interim);
       if(finalText){
         try{
