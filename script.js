@@ -311,6 +311,7 @@
       if(!Number.isFinite(amount)||amount<0)throw new Error("Enter a non-negative number");
       const result=Math.sqrt(amount);
       steps[stepIndex]={label:"√("+fmt(amount)+") = (corrected)",result:fmt(result)};
+      recordHistory("√("+fmt(amount)+")",fmt(result));
       current=String(Number(result.toFixed(10)));tokens=[];justEvaluated=true;showStep();
       message("Square-root step corrected");return;
     }
@@ -321,8 +322,10 @@
       const rate=Number(rateText),amount=Number(gstMatch[1].replace(/,/g,""));
       if(!Number.isFinite(rate)||rate<0||rate>100)throw new Error("Enter a GST rate from 0 to 100");
       const result=gstMatch[2]==="+"?amount*(1+rate/100):amount/(1+rate/100);
-      steps[stepIndex]={label:fmt(amount)+(gstMatch[2]==="+"?" + GST ":" − GST ")+rate+"% = (corrected)",result:fmt(result)};
-      gstRate=rate;current=String(Number(result.toFixed(10)));tokens=[];justEvaluated=true;showStep();message("GST step corrected and recalculated");return;
+      const correctedLabel=fmt(amount)+(gstMatch[2]==="+"?" + GST ":" − GST ")+rate+"%";
+      steps[stepIndex]={label:correctedLabel+" = (corrected)",result:fmt(result)};
+      gstRate=rate;recordHistory(correctedLabel,fmt(result));
+      current=String(Number(result.toFixed(10)));tokens=[];justEvaluated=true;showStep();message("GST step corrected and recalculated");return;
     }
     const revised=prompt(
       item.expression?"Correct the full calculation expression:":"Correct this calculation step:",
@@ -345,6 +348,7 @@
     }else{
       steps[stepIndex]={label:revised+" = (corrected)",result:fmt(result)};
     }
+    recordHistory(revised,fmt(result));
     current=String(result);tokens=[];justEvaluated=true;showStep();message("Calculation corrected and all its review steps recalculated");
   };
   const replay=()=>{
