@@ -59,7 +59,15 @@
       </div>
       <p id="status" class="status" role="status">Ready</p>
     </section>
-    <footer>Calculations stay in this browser on this device.</footer>
+    <section class="history-panel" aria-labelledby="history-heading">
+      <div class="history-heading-row">
+        <div><p class="eyebrow">RECENT ACTIVITY</p><h2 id="history-heading">Calculation history</h2></div>
+        <button id="history-clear" class="history-clear" type="button" disabled>Clear history</button>
+      </div>
+      <p id="history-empty" class="history-empty">Your calculations will appear here after you press =.</p>
+      <div id="history-list" class="history-list" aria-live="polite"></div>
+    </section>
+    <footer>History is saved in this browser on this device.</footer>
   </main>
   <script src="./script.js?v=speech-4"></script>
 </body>
