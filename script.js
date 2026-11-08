@@ -259,7 +259,7 @@
     // If the user presses two operators in a row, replace only the pending operator.
     if(justEvaluated){tokens=[current];justEvaluated=false;entryStarted=false;}
     else if(!tokens.length){tokens.push(current);}
-    else if(/[+−×÷]$/.test(tokens[tokens.length-1])){
+    else if(/[+−×÷^]$/.test(tokens[tokens.length-1])){
       if(entryStarted){tokens.push(current);}
       else {tokens[tokens.length-1]=op;current="0";render();return;}
     }else if(entryStarted){tokens.push(current);}
