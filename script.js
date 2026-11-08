@@ -2,9 +2,9 @@
   const $ = selector => document.querySelector(selector);
   const display=$("#display"), expressionView=$("#expression"), status=$("#status");
   const memoryIndicator=$("#memory-indicator"), modeLabel=$("#mode-label");
-  const soundToggle=$("#sound-toggle"), soundLabel=$("#sound-label");
+  const voiceToggle=$("#voice-toggle"), voiceLabel=$("#voice-label");
   let current="0", tokens=[], memory=0, gstRate=18, justEvaluated=false;
-  let steps=[], stepIndex=-1, replayTimer=null, soundEnabled=true, audioContext=null, lastMrc=false;
+  let steps=[], stepIndex=-1, replayTimer=null, voiceEnabled=true, lastMrc=false;
 
   const message = value => { status.textContent=value; };
   const fmt = value => {
@@ -19,34 +19,32 @@
   };
   const render = () => {
     const n=Number(current);
+    display.classList.remove("review-result");
     display.textContent=current!=="" && Number.isFinite(n) ? fmt(n) : current;
     expressionView.textContent=tokens.join(" ") + (tokens.length ? (tokens[tokens.length-1] && /[+−×÷]$/.test(tokens[tokens.length-1]) ? "" : "") : "");
     memoryIndicator.textContent=memory!==0?"M":"";
   };
   const stopReplay = () => { if(replayTimer!==null){clearInterval(replayTimer);replayTimer=null;} };
-  const tone = kind => {
-    if(!soundEnabled)return;
-    try{
-      const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
-      audioContext ||= new AC();if(audioContext.state==="suspended")audioContext.resume();
-      const now=audioContext.currentTime,osc=audioContext.createOscillator(),gain=audioContext.createGain();
-      const cfg=kind==="equals"?[740,.10,.04,"sine"]:kind==="operator"?[510,.06,.025,"sine"]:kind==="utility"?[390,.055,.02,"triangle"]:[620,.045,.017,"sine"];
-      osc.type=cfg[3];osc.frequency.setValueAtTime(cfg[0],now);
-      if(kind==="equals")osc.frequency.exponentialRampToValueAtTime(880,now+cfg[1]);
-      gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(cfg[2],now+.008);gain.gain.exponentialRampToValueAtTime(.0001,now+cfg[1]);
-      osc.connect(gain);gain.connect(audioContext.destination);osc.start(now);osc.stop(now+cfg[1]+.01);
-    }catch(_){}
+  const spokenLabel = button => {
+    if (button.dataset.value !== undefined) return ({".":"decimal point","00":"double zero","+":"plus","−":"minus","×":"multiply","÷":"divide"})[button.dataset.value] || button.dataset.value;
+    const labels={"clear":"all clear","clear-entry":"clear entry","sign":"change sign","percent":"percent","sqrt":"square root","equals":"equals","gst-plus":"add GST","gst-minus":"remove GST","rate":"GST rate","memory-plus":"memory plus","memory-minus":"memory minus","memory-recall":"memory recall","check-prev":"previous step","check-next":"next step","correct":"correct","replay":"replay steps"};
+    return labels[button.dataset.action] || button.textContent.replace(/\\s+/g," ").trim().toLowerCase();
   };
-  const setSound=on=>{
-    soundEnabled=on;soundToggle.setAttribute("aria-pressed",String(on));
-    soundLabel.textContent=on?"Sound on":"Sound off";
-    soundToggle.title=on?"Turn button sounds off":"Turn button sounds on";
-    soundToggle.querySelector(".sound-symbol").textContent=on?"♪":"∅";
+  const speak = text => {
+    if (!voiceEnabled || !("speechSynthesis" in window) || !text) return;
+    try { const u=new SpeechSynthesisUtterance(String(text));u.lang="en-IN";u.rate=.92;u.pitch=1;window.speechSynthesis.speak(u); } catch (_) {}
   };
-  soundToggle.addEventListener("click",()=>{setSound(!soundEnabled);if(soundEnabled)tone("utility");});
+  const setVoice = on => {
+    voiceEnabled=on;voiceToggle.setAttribute("aria-pressed",String(on));
+    voiceLabel.textContent=on?"Voice on":"Voice off";
+    voiceToggle.title=on?"Turn spoken button feedback off":"Turn spoken button feedback on";
+    voiceToggle.querySelector(".sound-symbol").textContent=on?"◖":"◗";
+    if(on)speak("Voice feedback on");else if("speechSynthesis" in window)window.speechSynthesis.cancel();
+  };
+  voiceToggle.addEventListener("click",()=>setVoice(!voiceEnabled));
 
   // Recursive-descent parser: multiplication/division take precedence over addition/subtraction.
-  const evaluate = source => {
+  const evaluate = (source, trace=[]) => {
     const s=source.replace(/×/g,"*").replace(/÷/g,"/").replace(/−/g,"-").replace(/,/g,"").replace(/\s+/g,"");
     const parts=s.match(/(?:\d+(?:\.\d*)?|\.\d+)|[()+\-*/]/g)||[];
     if(parts.join("")!==s || !parts.length)throw new Error("Check the calculation and try again");
@@ -58,8 +56,8 @@
       const p=parts[i++];if(!p||!/^\d*\.?\d+$/.test(p))throw new Error("Incomplete calculation");
       return Number(p);
     };
-    const term=()=>{let v=factor();while(parts[i]==="*"||parts[i]==="/"){const op=parts[i++],r=factor();if(op==="/"&&r===0)throw new Error("Cannot divide by zero");v=op==="*"?v*r:v/r;}return v;};
-    const expr=()=>{let v=term();while(parts[i]==="+"||parts[i]==="-"){const op=parts[i++],r=term();v=op==="+"?v+r:v-r;}return v;};
+    const term=()=>{let v=factor();while(parts[i]==="*"||parts[i]==="/"){const left=v,op=parts[i++],r=factor();if(op==="/"&&r===0)throw new Error("Cannot divide by zero");v=op==="*"?v*r:v/r;trace.push({label:fmt(left)+(op==="*"?" × ":" ÷ ")+fmt(r)+" =",result:fmt(v)});}return v;};
+    const expr=()=>{let v=term();while(parts[i]==="+"||parts[i]==="-"){const left=v,op=parts[i++],r=term();v=op==="+"?v+r:v-r;trace.push({label:fmt(left)+(op==="+"?" + ":" − ")+fmt(r)+" =",result:fmt(v)});}return v;};
     const result=expr();if(i!==parts.length)throw new Error("Invalid calculation");if(!Number.isFinite(result))throw new Error("Invalid result");return Number(result.toFixed(10));
   };
   const expressionText=()=>tokens.join(" ")+(tokens.length?" ":"")+current;
@@ -85,15 +83,16 @@
     current="0";lastMrc=false;render();
   };
   const equals=()=>{
-    const source=expressionText(),result=evaluate(source);
-    saveStep(source+" =",fmt(result));current=String(result);tokens=[];justEvaluated=true;
+    const source=expressionText(),trace=[];
+    const result=evaluate(source,trace);
+    steps.push(...trace);saveStep(source+" =",fmt(result));current=String(result);tokens=[];justEvaluated=true;
     message("Result saved · "+steps.length+" of 120 review steps");render();
   };
   const clear=()=>{current="0";tokens=[];justEvaluated=false;modeLabel.textContent="STANDARD";message("Ready");render();};
   const clearEntry=()=>{current="0";justEvaluated=false;message("Current entry cleared");render();};
   const showStep=()=>{
     const item=steps[stepIndex];if(!item)return;
-    expressionView.textContent=item.label;display.textContent=item.result;
+    expressionView.textContent=item.label;display.textContent=item.result;display.classList.add("review-result");
     message("Step "+(stepIndex+1)+" of "+steps.length);
   };
   const correct=()=>{
@@ -163,19 +162,19 @@
       stopReplay();
       const action=button.dataset.action,value=button.dataset.value;
       const kind=button.classList.contains("equals")||action==="equals"?"equals":button.classList.contains("operation")?"operator":button.classList.contains("review-key")||button.classList.contains("gst")||button.classList.contains("function")||button.classList.contains("memory")?"utility":"key";
-      tone(kind);if(navigator.vibrate)navigator.vibrate(8);
+      speak(spokenLabel(button));if(navigator.vibrate)navigator.vibrate(8);
       if(action)handle(action);else if(value&&["+","−","×","÷"].includes(value))operator(value);else if(value)input(value);
     });
   });
   window.addEventListener("keydown",event=>{
     if(event.ctrlKey||event.metaKey||event.altKey)return;
     const k=event.key;
-    if(/^[0-9.]$/.test(k)){input(k);}
-    else if(k==="Enter"||k==="="){tone("equals");handle("equals");}
-    else if(k==="Escape"){tone("utility");clear();}
+    if(/^[0-9.]$/.test(k)){speak(k==="."?"decimal point":k);input(k);}
+    else if(k==="Enter"||k==="="){speak("equals");handle("equals");}
+    else if(k==="Escape"){speak("all clear");clear();}
     else if(k==="Backspace"){current=current.length>1?current.slice(0,-1):"0";render();}
-    else if(k==="+"||k==="-"||k==="*"||k==="/"){event.preventDefault();operator(({ "+":"+","-":"−","*":"×","/":"÷"})[k]);}
-    else if(k==="%")handle("percent");
+    else if(k==="+"||k==="-"||k==="*"||k==="/"){event.preventDefault();speak(({ "+":"plus","-":"minus","*":"multiply","/":"divide"})[k]);operator(({ "+":"+","-":"−","*":"×","/":"÷"})[k]);}
+    else if(k==="%"){speak("percent");handle("percent");}
   });
   setSound(true);render();
 })();
