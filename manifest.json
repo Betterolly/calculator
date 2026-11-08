@@ -1,0 +1,19 @@
+{
+  "id": "./",
+  "name": "Business Calculator",
+  "short_name": "Calculator",
+  "description": "A clean, familiar business calculator with GST and calculation review.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f5f8",
+  "theme_color": "#f3f5f8",
+  "icons": [
+    {
+      "src": "./icons/calculator.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
