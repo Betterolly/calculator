@@ -6,7 +6,9 @@
   <meta name="theme-color" content="#f3f5f8">
   <meta name="description" content="A clean, familiar business calculator with GST and calculation review.">
   <title>Business Calculator</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/svg+xml" href="./icons/calculator.svg">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="stylesheet" href="./style.css">
 </head>
 <body>
   <main class="app-shell">
@@ -28,26 +30,20 @@
         <button class="key utility" data-action="gst-minus">GST−</button>
         <button class="key utility" data-action="rate">RATE</button>
         <button class="key utility" data-action="sign">+/−</button>
-
         <button class="key utility" data-action="clear-entry">CE</button>
         <button class="key utility" data-action="clear">ON/AC</button>
         <button class="key utility" data-action="percent">%</button>
         <button class="key operator" data-value="÷">÷</button>
-
         <button class="key" data-value="7">7</button><button class="key" data-value="8">8</button>
         <button class="key" data-value="9">9</button><button class="key operator" data-value="×">×</button>
-
         <button class="key" data-value="4">4</button><button class="key" data-value="5">5</button>
         <button class="key" data-value="6">6</button><button class="key operator" data-value="−">−</button>
-
         <button class="key" data-value="1">1</button><button class="key" data-value="2">2</button>
         <button class="key" data-value="3">3</button><button class="key operator" data-value="+">+</button>
-
         <button class="key memory" data-action="memory-recall">MRC</button>
         <button class="key memory" data-action="memory-minus">M−</button>
         <button class="key memory" data-action="memory-plus">M+</button>
         <button class="key" data-value="00">00</button>
-
         <button class="key" data-value="0">0</button>
         <button class="key" data-value=".">.</button>
         <button class="key utility" data-action="sqrt">√</button>
@@ -62,9 +58,8 @@
       </div>
       <p id="status" class="status" role="status">Ready</p>
     </section>
-
     <footer>Calculations stay in this browser on this device.</footer>
   </main>
-  <script src="script.js"></script>
+  <script src="./script.js"></script>
 </body>
 </html>
