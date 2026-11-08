@@ -227,9 +227,9 @@
   const input=value=>{
     if(justEvaluated){current="0";tokens=[];justEvaluated=false;entryStarted=false;}
     if(value==="."&&current.includes("."))return;
-    if(value==="."&&current==="0"){current="0.";render();return;}
+    if(value==="."&&current==="0"){current="0.";entryStarted=true;render();return;}
     if(current==="0"&&value!=="0")current=value;
-    else if(current==="0"&&value==="0")return;
+    else if(current==="0"&&value==="0"){entryStarted=true;render();return;}
     else current+=value;
     entryStarted=true;lastMrc=false;render();
   };
@@ -298,8 +298,8 @@
       switch(action){
         case "clear":clear();break;
         case "clear-entry":clearEntry();break;
-        case "sign":current=String(-raw());render();break;
-        case "percent":current=String(raw()/100);message("Converted to percentage");render();break;
+        case "sign":current=String(-raw());entryStarted=true;render();break;
+        case "percent":current=String(raw()/100);entryStarted=true;message("Converted to percentage");render();break;
         case "sqrt":{const n=raw();if(n<0)throw new Error("Square root needs a non-negative number");const result=Math.sqrt(n);saveStep("√("+fmt(n)+") =",fmt(result));recordHistory("√("+fmt(n)+")",fmt(result));current=String(result);tokens=[];justEvaluated=true;entryStarted=false;message("Square root calculated");render();break;}
         case "equals":equals();break;
         case "gst-plus":gst("add");break;
