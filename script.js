@@ -118,7 +118,7 @@
       .replace(/\b(please|calculate|equals?|equal to|what is|what's|the answer|how much|kitna|kitne|hota|hoti|hai|hain|batao|nikalo|karo|answer|is|what)\b/g," ")
       .trim();
     const words=cleaned.split(/\s+/).filter(Boolean),atoms=[];
-    const operators={plus:"+",add:"+",added:"+",jod:"+",jama:"+",जोड़:"+",जमा:"+",minus:"−",subtract:"−",take:"−",ghata:"−",ghatao:"−",घटा:"−",घटाओ:"−",times:"×",multiply:"×",multiplied:"×",into:"×",guna:"×",गुना:"×",divide:"÷",divided:"÷",over:"÷",bhaag:"÷",bhag:"÷",भाग:"÷"};
+    const operators={"+":"+","-":"−","−":"−","*":"×","×":"×","/":"÷","÷":"÷",plus:"+",add:"+",added:"+",jod:"+",jama:"+",जोड़:"+",जमा:"+",minus:"−",subtract:"−",take:"−",ghata:"−",ghatao:"−",घटा:"−",घटाओ:"−",times:"×",multiply:"×",multiplied:"×",into:"×",guna:"×",गुना:"×",divide:"÷",divided:"÷",over:"÷",bhaag:"÷",bhag:"÷",भाग:"÷"};
     let numberGroup=[];
     const pushNumberGroup=()=>{
       if(!numberGroup.length)return;
