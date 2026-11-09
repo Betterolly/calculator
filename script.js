@@ -156,7 +156,7 @@
         expression+=atom.value;previous="operator";
       }
     }
-    if(!expression||!/^[\d.]+(?:[+−×÷][\d.]+)*$/.test(expression))throw new Error("I couldn't understand that. Try saying “2 plus 5 minus 67”.");
+    if(!expression||!/^[+−-]*(?:\d+(?:\.\d*)?|\.\d+)(?:[+−×÷][+−-]*(?:\d+(?:\.\d*)?|\.\d+))*$/.test(expression))throw new Error("I couldn't understand that. Try saying “2 plus 5 minus 67”.");
     return expression;
   };
   const resetMicUI = () => {
@@ -177,7 +177,7 @@
       saveStep(expression+" =",fmt(result),{groupId,expression});
       recordHistory(expression,fmt(result));
       expressionView.textContent=expression+" =";current=String(result);justEvaluated=true;entryStarted=false;
-      message("Heard: "+expression+" · result saved");render();speakCalculation(expression,fmt(result));
+      message("Recognized: "+String(transcript).trim()+" · Calculated as: "+expression+" · result saved");render();speakCalculation(expression,fmt(result));
     }catch(error){message(error.message||"Could not understand that calculation");speak("Sorry, I could not understand that calculation");}
   };
   if(SpeechRecognition){
